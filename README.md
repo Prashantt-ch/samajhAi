@@ -1,0 +1,2 @@
+# samajhAi
+IEEE hackathon
