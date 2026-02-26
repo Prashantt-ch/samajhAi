@@ -3,6 +3,8 @@ import pandas as pd
 import plotly.express as px
 from openai import OpenAI
 
+
+
 st.set_page_config(page_title="SamajhAI", layout="wide")
 
 st.title("SamajhAI")
@@ -45,9 +47,17 @@ st.markdown("""
 st.subheader("Dataset Preview")
 st.dataframe(df)
 
+# client = OpenAI(
+#     base_url="https://openrouter.ai/api/v1",
+#     api_key="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",
+#     default_headers={
+#         "HTTP-Referer": "http://localhost:8501",
+#         "X-Title": "SamajhAI"
+#     }
+# )
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key="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",
+    api_key=st.secrets["OPENROUTER_API_KEY"],
     default_headers={
         "HTTP-Referer": "http://localhost:8501",
         "X-Title": "SamajhAI"
@@ -216,4 +226,5 @@ elif section == "Chat":
                     "role": "assistant",
                     "content": reply
                 })
+
 
