@@ -5,38 +5,32 @@ from openai import OpenAI
 
 st.set_page_config(page_title="SamajhAI", layout="wide")
 
-st.title("📊 SamajhAI")
-st.markdown("### ✨ SamajhAI turns confusion into clarity")
+st.title("SamajhAI")
+st.markdown("SamajhAI helps you understand your data clearly and effortlessly.")
 
-# ---------- SIDEBAR ----------
-st.sidebar.title("SamajhAI Control Panel")
+st.sidebar.title("Control Panel")
 
-uploaded_file = st.sidebar.file_uploader("Upload CSV", type=["csv"])
-sheet_url = st.sidebar.text_input("Or paste Google Sheet link")
+uploaded_file = st.sidebar.file_uploader("Upload a CSV file", type=["csv"])
+sheet_url = st.sidebar.text_input("Or enter a Google Sheet link")
 
 df = None
 
-# ---------- FILE INPUT ----------
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
-# ---------- GOOGLE SHEET INPUT ----------
 elif sheet_url:
     csv_url = sheet_url.replace('/edit#gid=', '/export?format=csv&gid=')
     df = pd.read_csv(csv_url)
 
-# ---------- IF NO DATA ----------
 if df is None:
-    st.info("⬅️ Upload data from sidebar to begin")
+    st.info("Please upload a dataset using the sidebar to continue.")
     st.stop()
 
-# ---------- NAVIGATION ----------
 section = st.sidebar.radio(
-    "Navigate",
-    ["Overview", "AI Insights", "Visualizations"]
+    "Select Section",
+    ["Overview", "AI Insights", "Visualizations", "Chat"]
 )
 
-# ---------- BEAUTY MODE ----------
 st.markdown("""
 <style>
 [data-testid="stMetric"] {
@@ -48,111 +42,177 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- DATA PREVIEW ----------
-st.subheader("📄 Data Preview")
+st.subheader("Dataset Preview")
 st.dataframe(df)
 
-# ---------- OPENROUTER SETUP ----------
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key="YOUR_API_KEY"
+    api_key="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",
+    default_headers={
+        "HTTP-Referer": "http://localhost:8501",
+        "X-Title": "SamajhAI"
+    }
 )
 
-# ---------- OVERVIEW ----------
 if section == "Overview":
-    st.subheader("📌 Dataset Profile")
+
+    st.subheader("Dataset Overview")
 
     col1, col2, col3, col4 = st.columns(4)
 
-    col1.metric("Rows", df.shape[0])
-    col2.metric("Columns", df.shape[1])
+    col1.metric("Total Rows", df.shape[0])
+    col2.metric("Total Columns", df.shape[1])
     col3.metric("Missing Values", df.isnull().sum().sum())
-    col4.metric("Numeric Columns", len(df.select_dtypes(include=['int64','float64']).columns))
+    col4.metric(
+        "Numeric Columns",
+        len(df.select_dtypes(include=['int64', 'float64']).columns)
+    )
 
-# ---------- AI INSIGHTS ----------
 elif section == "AI Insights":
 
     colA, colB = st.columns(2)
 
-    if colA.button("🧠 Generate AI Summary"):
-        with st.spinner("Analyzing dataset..."):
-            data_sample = df.head(20).to_string()
+    if colA.button("Generate Summary"):
+
+        with st.spinner("Analyzing data..."):
+
+            sample = df.head(20).to_string()
 
             prompt = f"""
-            This is a dataset:
-            {data_sample}
+            This is a dataset sample:
 
-            Explain:
-            - What this data represents
-            - Major patterns
+            {sample}
+
+            Explain what this dataset represents and identify important patterns.
             """
 
             response = client.chat.completions.create(
                 model="meta-llama/llama-3-8b-instruct",
                 messages=[{"role": "user", "content": prompt}],
-                extra_headers={
-                    "HTTP-Referer": "http://localhost",
-                    "X-Title": "SamajhAI"
-                }
+                
             )
 
-            st.success("AI Summary Generated")
-            st.markdown(f"### 📄 AI Summary\n{response.choices[0].message.content}")
+            st.subheader("Summary")
+            st.write(response.choices[0].message.content)
 
-    if colB.button("🔍 Find Insights"):
-        with st.spinner("Finding insights..."):
-            data_sample = df.describe().to_string()
+    if colB.button("Find Insights"):
+
+        with st.spinner("Generating insights..."):
+
+            stats = df.describe().to_string()
 
             prompt = f"""
-            From this statistical summary:
-            {data_sample}
+            Based on this statistical summary:
 
-            Provide 5 actionable insights.
+            {stats}
+
+            Provide five meaningful and actionable insights.
             """
 
             response = client.chat.completions.create(
                 model="meta-llama/llama-3-8b-instruct",
                 messages=[{"role": "user", "content": prompt}],
-                extra_headers={
-                    "HTTP-Referer": "http://localhost",
-                    "X-Title": "SamajhAI"
-                }
+                
             )
 
-            st.success("Insights Ready")
-            st.markdown(f"### 🔎 Key Insights\n{response.choices[0].message.content}")
+            st.subheader("Insights")
+            st.write(response.choices[0].message.content)
 
-# ---------- VISUALIZATIONS ----------
 elif section == "Visualizations":
 
-    st.subheader("📊 Smart Visualizations")
+    st.subheader("Data Visualizations")
 
-    numeric_cols = df.select_dtypes(include=['int64','float64']).columns
+    numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
     categorical_cols = df.select_dtypes(include=['object']).columns
 
     chart_type = st.selectbox(
-        "Choose Chart Type",
+        "Select Chart Type",
         ["Histogram", "Box Plot", "Scatter Plot", "Bar Chart"]
     )
 
     if chart_type == "Histogram":
-        col = st.selectbox("Select Numeric Column", numeric_cols)
+
+        col = st.selectbox("Select Column", numeric_cols)
         fig = px.histogram(df, x=col)
         st.plotly_chart(fig, use_container_width=True)
 
     elif chart_type == "Box Plot":
-        col = st.selectbox("Select Numeric Column", numeric_cols)
+
+        col = st.selectbox("Select Column", numeric_cols)
         fig = px.box(df, y=col)
         st.plotly_chart(fig, use_container_width=True)
 
     elif chart_type == "Scatter Plot":
+
         x = st.selectbox("X Axis", numeric_cols)
         y = st.selectbox("Y Axis", numeric_cols)
         fig = px.scatter(df, x=x, y=y)
         st.plotly_chart(fig, use_container_width=True)
 
     elif chart_type == "Bar Chart":
+
         cat = st.selectbox("Category", categorical_cols)
         num = st.selectbox("Value", numeric_cols)
         fig = px.bar(df, x=cat, y=num)
         st.plotly_chart(fig, use_container_width=True)
+
+elif section == "Chat":
+
+    st.subheader("Chat with your data")
+
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+
+    user_input = st.chat_input("Ask anything about your dataset")
+
+    if user_input:
+
+        st.session_state.chat_history.append({
+            "role": "user",
+            "content": user_input
+        })
+
+        with st.chat_message("user"):
+            st.write(user_input)
+
+        with st.chat_message("assistant"):
+
+            with st.spinner("Thinking..."):
+
+                data_context = df.head(50).to_string()
+
+                messages = [
+                    {
+                        "role": "system",
+                        "content": f"""
+                        You are a professional data analyst.
+
+                        Dataset sample:
+                        {data_context}
+
+                        Answer questions clearly.
+                        Explain trends, patterns, and meanings.
+                        Use simple language when needed.
+                        """
+                    }
+                ]
+
+                messages.extend(st.session_state.chat_history)
+
+                response = client.chat.completions.create(
+                    model="meta-llama/llama-3-8b-instruct",
+                    messages=messages,
+                )
+
+                reply = response.choices[0].message.content
+
+                st.write(reply)
+
+                st.session_state.chat_history.append({
+                    "role": "assistant",
+                    "content": reply
+                })
